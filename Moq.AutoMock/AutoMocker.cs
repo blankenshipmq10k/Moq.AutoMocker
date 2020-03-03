@@ -107,6 +107,9 @@ namespace Moq.AutoMock
         public T CreateInstance<T>(bool enablePrivate) where T : class
             => (T)CreateInstance(typeof(T), enablePrivate);
 
+        public T CreateInstance<T>(bool enablePrivate, Dictionary<string, object> namedParameters) where T : class
+            => (T) CreateInstance(typeof(T), enablePrivate, namedParameters);
+
         /// <summary>
         /// Constructs an instance from known services. Any dependencies (constructor arguments)
         /// are fulfilled by searching the container or, if not found, automatically generating
@@ -131,6 +134,7 @@ namespace Moq.AutoMock
         {
             var bindingFlags = GetBindingFlags(enablePrivate);
             var arguments = CreateArguments(type, bindingFlags);
+
             try
             {
                 var ctor = type.SelectCtor(typeMap.Keys.ToArray(), bindingFlags);
@@ -141,6 +145,45 @@ namespace Moq.AutoMock
                 ExceptionDispatchInfo.Capture(e.InnerException).Throw();
                 throw;  //Not really reachable either way, but I like this better than return default(T)
             }
+        }
+
+        public object CreateInstance(Type type, bool enablePrivate, Dictionary<string, object> namedParameters)
+        {
+            var bindingFlags = GetBindingFlags(enablePrivate);
+            //var arguments = CreateArguments(type, bindingFlags);
+
+            var arguments = MapArguments(type, bindingFlags, namedParameters);
+
+            try
+            {
+                var ctor = type.SelectCtor(typeMap.Keys.ToArray(), bindingFlags);
+                return ctor.Invoke(arguments);
+            }
+            catch (TargetInvocationException e)
+            {
+                ExceptionDispatchInfo.Capture(e.InnerException).Throw();
+                throw;  //Not really reachable either way, but I like this better than return default(T)
+            }
+        }
+
+        private object[] MapParameters(MethodBase method, IDictionary<string, object> namedParameters)
+        {
+            string[] paramNames = method.GetParameters().Select(p => p.Name).ToArray();
+            object[] parameters = new object[paramNames.Length];
+            for (int i = 0; i < parameters.Length; ++i)
+            {
+                parameters[i] = Type.Missing;
+            }
+            foreach (var item in namedParameters)
+            {
+                var paramName = item.Key;
+                var paramIndex = Array.IndexOf(paramNames, paramName);
+                if (paramIndex >= 0)
+                {
+                    parameters[paramIndex] = item.Value;
+                }
+            }
+            return parameters;
         }
 
         /// <summary>
@@ -501,6 +544,47 @@ namespace Moq.AutoMock
             var ctor = type.SelectCtor(typeMap.Keys.ToArray(), bindingFlags);
             var arguments = ctor.GetParameters().Select(x => Get(x.ParameterType)).ToArray();
             return arguments;
+        }
+
+        private object[] MapArguments(Type type, BindingFlags bindingFlags, IDictionary<string, object> namedParameters)
+        {
+            var ctor = type.SelectCtor(typeMap.Keys.ToArray(), bindingFlags);
+
+            string[] paramNames = ctor.GetParameters().Select(p => p.Name).ToArray();
+            Type[] paramTypes = ctor.GetParameters().Select(p => p.ParameterType).ToArray();
+
+            object[] parameters = new object[paramNames.Length];
+            for (int i = 0; i < parameters.Length; ++i)
+            {
+                parameters[i] = Type.Missing;
+            }
+            foreach (var item in namedParameters)
+            {
+                var paramName = item.Key;
+                var paramIndex = Array.IndexOf(paramNames, paramName);
+                if (paramIndex >= 0)
+                {
+                    parameters[paramIndex] = item.Value;
+                }
+            }
+
+            foreach (var paramName in paramNames)
+            {
+                var index = Array.IndexOf(paramNames, paramName);
+                if (index < 0)
+                    continue;
+
+                if (parameters[index] != Type.Missing)
+                    continue;
+
+                var typeForParam = paramTypes[index];
+                if (typeMap.ContainsKey(typeForParam))
+                    parameters[index] = typeMap[typeForParam].Value;
+                else
+                    parameters[index] = null;
+            }
+
+            return parameters;
         }
 
         private Mock GetOrMakeMockFor(Type type)

@@ -31,12 +31,11 @@
 
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0-beta-62925-02" PrivateAssets="All" />
-    <PackageReference Include="Moq" version="4.8.2" />
+    <PackageReference Include="Moq" version="4.8.2" Version="4.8.2" />
   </ItemGroup>
   
   <ItemGroup>
-    <None Include="..\LICENSE" Pack="true" PackagePath=""/>
+    <None Include="..\LICENSE" Pack="true" PackagePath="" />
     <None Include="AutoMocker.Combine.cs.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>AutoMocker.Combine.cs.generated.cs</LastGenOutput>
