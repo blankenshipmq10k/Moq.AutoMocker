@@ -166,26 +166,6 @@ namespace Moq.AutoMock
             }
         }
 
-        private object[] MapParameters(MethodBase method, IDictionary<string, object> namedParameters)
-        {
-            string[] paramNames = method.GetParameters().Select(p => p.Name).ToArray();
-            object[] parameters = new object[paramNames.Length];
-            for (int i = 0; i < parameters.Length; ++i)
-            {
-                parameters[i] = Type.Missing;
-            }
-            foreach (var item in namedParameters)
-            {
-                var paramName = item.Key;
-                var paramIndex = Array.IndexOf(paramNames, paramName);
-                if (paramIndex >= 0)
-                {
-                    parameters[paramIndex] = item.Value;
-                }
-            }
-            return parameters;
-        }
-
         /// <summary>
         /// Constructs a self-mock from the services available in the container. A self-mock is
         /// a concrete object that has virtual and abstract members mocked. The purpose is so that
